@@ -1,4 +1,4 @@
-name = "PhysiologyInterface.jl"
+name = "PhysiologyInterface"
 uuid = "52f4dc7a-aafb-496a-809d-09a6b4f782c5"
 authors = ["mattar13 <mtarchick13@gmail.com> and contributors"]
 version = "0.1.0"
