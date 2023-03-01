@@ -1,7 +1,10 @@
-name = "PhysiologyInterface_"
+name = "PhysiologyInterface"
 uuid = "52f4dc7a-aafb-496a-809d-09a6b4f782c5"
 authors = ["mattar13 <mtarchick13@gmail.com> and contributors"]
 version = "0.1.0"
+
+[deps]
+Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
 
 [compat]
 julia = "1"
