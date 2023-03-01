@@ -1,6 +1,6 @@
-using PhysiologyInterface_
+using PhysiologyInterface
 using Test
 
-@testset "PhysiologyInterface_.jl" begin
+@testset "PhysiologyInterface.jl" begin
     # Write your tests here.
 end
