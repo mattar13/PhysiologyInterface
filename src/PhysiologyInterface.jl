@@ -1,6 +1,8 @@
 module PhysiologyInterface
 
 # Write your package code here.
+using ElectroPhysiology
+using PhysiologyAnalysis
 using Pluto
 
 include("opening_interface.jl")
