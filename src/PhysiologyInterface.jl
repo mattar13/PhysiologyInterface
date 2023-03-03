@@ -1,6 +1,8 @@
 module PhysiologyInterface
 
 # Write your package code here.
+using Pkg
+
 using ElectroPhysiology
 using PhysiologyAnalysis
 using Pluto
