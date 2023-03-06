@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.19
+# v0.19.22
 
 using Markdown
 using InteractiveUtils
@@ -17,7 +17,7 @@ end
 # ╔═╡ c8d46060-b3fe-11ed-0887-790bb5dd2fc0
 begin
 	using Pkg
-	Pkg.activate("../../")
+	#Pkg.activate("..")
 	using Dates, PlutoUI
 	using PhysiologyAnalysis
 	using DataFrames, XLSX, Query
@@ -34,7 +34,7 @@ md"
 datafile = "C:\\Users\\mtarc\\OneDrive - The University of Akron\\Projects\\Retinoschisis\\data_analysis.xlsx"
 
 # ╔═╡ da89edc7-04ef-4bf7-923d-f48a2fa3a12c
-dataset = openDataset(datafile, sheetName="all")
+dataset = openDataset(datafile);
 
 # ╔═╡ 1b247067-3d7d-4fb8-82a1-17328dafe734
 begin
@@ -53,22 +53,11 @@ $(@bind selectExps MultiSelect(exps))
 "
 end
 
-# ╔═╡ bfa2b45b-fcb1-4f66-95a5-35cb4461b4cb
-begin
-	if !isnothing(selectExps)
-		for selectExp in selectExps
-			println(selectExp |> typeof)
-			YEAR = selectExp[:Year]
-			MONTH = selectExp[:MON]
-			DAY = selectExp[:DAY]
-			#NUM = 
-			println(YEAR)
-		end
-	end
-end
+# ╔═╡ b166a475-5376-46a2-b669-6b0822090c55
+trace_A = matchExperiment(dataset["TRACES"], exps[1])
 
-# ╔═╡ b1ca0549-2d4d-4c7d-8c07-29aa3e668329
-haskey(selectExps[1], :Year)
+# ╔═╡ fe94b165-6960-4b52-b439-ca2326ca5548
+
 
 # ╔═╡ a19b3fc1-6df3-4722-9ce8-76b78ecd3bda
 selectExps[1].Year
@@ -77,8 +66,8 @@ selectExps[1].Year
 # ╠═c8d46060-b3fe-11ed-0887-790bb5dd2fc0
 # ╟─9a5153c5-9c2d-4821-b72c-5e79aa0693b1
 # ╠═fe369c30-a581-4b9d-a5e2-d194db4d61c6
-# ╟─da89edc7-04ef-4bf7-923d-f48a2fa3a12c
-# ╟─1b247067-3d7d-4fb8-82a1-17328dafe734
-# ╠═bfa2b45b-fcb1-4f66-95a5-35cb4461b4cb
-# ╠═b1ca0549-2d4d-4c7d-8c07-29aa3e668329
+# ╠═da89edc7-04ef-4bf7-923d-f48a2fa3a12c
+# ╠═1b247067-3d7d-4fb8-82a1-17328dafe734
+# ╠═b166a475-5376-46a2-b669-6b0822090c55
+# ╠═fe94b165-6960-4b52-b439-ca2326ca5548
 # ╠═a19b3fc1-6df3-4722-9ce8-76b78ecd3bda
