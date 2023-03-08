@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.22
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -19,12 +19,6 @@ begin
 	using PlutoUI
 	using Dates
 	using DataFrames, Query, XLSX
-end
-
-# ╔═╡ f025cf76-d513-4f9f-a5be-c7461dcd34ef
-begin 
-	#using Pkg
-	#Pkg.activate("../")
 	using PhysiologyAnalysis #This will be updated in general registry soon
 	import PhysiologyAnalysis: eachchannel, eachsweep
 end
@@ -53,160 +47,44 @@ channels = ["Vm_prime", "Vm_prime4"]; #Specify which channels you are using
 # ╔═╡ 23be0000-67de-4f22-98e7-cd89287a2a6f
 photoreceptors = "Rods";
 
-# ╔═╡ 01fab469-e7c3-4573-9e75-d2d13c7ff3de
-dataset = createDataset(exp_root; t_post = 2.0, verbose = false);
-
 # ╔═╡ 88ef46c3-7575-4a18-a8b5-15a0c2152c6a
 md"""
-# Analysis of the a-wave
+# Analysis of the data
 Analysis Window end = $(@bind t_post_a NumberField(-1.0:0.01:10.000; default = 2.0))s
 """
 
+# ╔═╡ 01fab469-e7c3-4573-9e75-d2d13c7ff3de
+dataset = createDataset(exp_root; t_post = t_post_a, verbose = false);
+
 # ╔═╡ 734c8f3e-7092-48fd-9784-391bde74fc08
 begin	
-	trace_A = dataset["TRACES"] |> 
-		@filter(_.Condition == "BaCl_LAP4" && _.Photoreceptor == "Rods") |> 
-	DataFrame
+	trace_A = matchExperiment(dataset["TRACES"], 
+		(Condition = "BaCl_LAP4", Photoreceptor = "Rods")
+	)
 	
-	exp_A = dataset["EXPERIMENTS"] |> 
-		@filter(_.Condition == "BaCl_LAP4" && _.Photoreceptor == "Rods") |> 
-	DataFrame
+	exp_A = matchExperiment(dataset["EXPERIMENTS"], 
+		(Condition = "BaCl_LAP4", Photoreceptor = "Rods")
+	)
 	
-	cond_A = dataset["CONDITIONS"] |> 
-		@filter(_.Condition == "BaCl_LAP4" && _.Photoreceptor == "Rods") |> 
-	DataFrame
+	cond_A =  matchExperiment(dataset["CONDITIONS"], 
+		(Condition = "BaCl_LAP4", Photoreceptor = "Rods")
+	)
+		
 	#only include used channels
 	trace_A = trace_A |> @filter(_.Channel ∈ channels) |> 
 		@filter(_.Photoreceptor == photoreceptors) |> 
 	DataFrame
 	exp_A = exp_A |> @filter(_.Channel ∈ channels) |> 
 		@filter(_.Photoreceptor == photoreceptors) |> 
-	DataFrame	
-	dataA = readABF(trace_A.Path |> unique, channels = channels)
-	data_filter!(dataA, avg_swp = false, t_post = t_post_a) #Use the default data filter
+	DataFrame
+	trace_A
 end
 
-# ╔═╡ 3a7ca4cb-8df2-4869-b3ef-f39774c00b58
-md"""
-### Plotting the A-wave:
-
-xlims A:
-(
-$(@bind xlim1A NumberField(-1.0:0.01:10.000; default = -0.25)),
-$(@bind xlim2A NumberField(-1.0:0.01:10.000; default = t_post_a))
-)
-
-ylims A:
-	(
-	$(@bind ylim1A NumberField(
-		-10000.0:0.01:10000.000; default = minimum(dataA))),
-	$(@bind ylim2A NumberField(
-		-10000.0:0.01:10000.000; default = maximum(dataA)))
-)
-
-Photon Lims A:
-(
-$(@bind photon_lims1 NumberField(-1.0:0.1:10.0; default = -1.0)),
-$(@bind photon_lims2 NumberField(-1.0:0.1:10.0; default = 5.0))
-)
-
-Recovery Lims A:
-(
-$(@bind rec_lims1A 
-	NumberField(1.0:1.0:1000.0; default = 10.0))
-)
-$(@bind rec_lims2A 
-	NumberField(0.0:1.0:2000.0; default = maximum(trace_A.Percent_Recovery)*1000))
-"""
-
-# ╔═╡ c11191b2-3c8f-4962-b5f5-505b4042a5a1
-I_rng = 10 .^ range(photon_lims1, photon_lims2, length = 1000); #This is the range of points we fit over
-
-# ╔═╡ 45799282-ac17-44de-9929-99d766c9e556
-trace_A
-
-# ╔═╡ 7e697def-11bf-4783-9e35-a8bb9df0e530
+# ╔═╡ 44cf1164-5083-4e42-be38-f12edbc25f7f
 begin
-	fig1_awave, ax1 = plt.subplots(length(channels), 3) #This 
-	fig1_awave.subplots_adjust(
-		left=0.0, right=1.0, 
-		bottom=0.0, top=1.0, 
-		wspace=0.3, hspace=0.2
-	)
-	for (idx, data_ch) in enumerate(eachchannel(dataA))
-		println(idx)
-		#println(data_ch)
-		#println(data_ch.chNames[1])
-		trace_A_ch = trace_A |> @filter(_.Channel == data_ch.chNames[1]) |> DataFrame
-		if length(channels) > 1
-			#println(trace_A_ch.Response)
-			plot_experiment(ax1[idx, 1], dataA, channels = idx)
-			ax1[idx, 1].hlines(-trace_A_ch.Response, 
-				xmin = xlim1A, xmax = xlim2A, 
-			)
-			ax1[idx, 1].set_ylim((ylim1A, ylim2A))
-			ax1[idx, 1].set_xlim((xlim1A, xlim2A))
-
-			fits = exp_A |> @filter(_.Channel == data_ch.chNames[1]) |> DataFrame
-			plot_ir_scatter(ax1[idx, 2], trace_A_ch)
-			plot_ir_fit(ax1[idx, 2], 
-				(fits.RMAX_fit[1], fits.K_fit[1], fits.N_fit[1]),
-				fits.RSQ_fit[1]
-			)
-			ax1[idx, 2].set_xlim((10^photon_lims1, 10^photon_lims2))
-			ax1[idx, 2].set_ylim((-1.0, abs(ylim1A)))
-			ax1[idx, 2].legend()
-			
-			trace_A_ch.Percent_Recovery *= 1000
-			rdim_traces_A = trace_A_ch |> 
-				@filter(_.Response .> exp_A.rdim[idx]) |> 
-			DataFrame			
-			plot_IR(ax1[idx, 3], rdim_traces_A, y_row = :Peak_Time, 
-				plot_fits = false, color = :red, label = "Peak Time"
-			)
-			
-			tDOM_traces_A = trace_A_ch |> 
-				@filter(_.Percent_Recovery .> 0.0) |> 
-			DataFrame
-			
-			plot_IR(ax1[idx, 3], tDOM_traces_A, y_row = :Percent_Recovery, 
-				plot_fits = false, label = "Recovery"
-			)
-			ax1[idx, 3].legend()
-		else
-			plot_experiment(ax1[1], dataA, channels = idx)
-			ax1[1].set_ylim((ylim1A, ylim2A))
-			ax1[1].set_xlim((xlim1A, xlim2A))
-
-			fits = exp_A |> @filter(_.Channel == data_ch.chNames[1]) |> DataFrame
-			plot_ir_scatter(ax1[2], trace_A_ch)
-			plot_ir_fit(ax1[2], 
-				(fits.RMAX_fit[1], fits.K_fit[1], fits.N_fit[1]),
-				fits.RSQ_fit[1]
-			)
-			ax1[2].set_xlim((10^photon_lims1, 10^photon_lims2))
-			ax1[2].set_ylim((-1.0, abs(ylim1A)))
-			ax1[2].legend()
-			
-			trace_A_ch.Percent_Recovery *= 1000
-			rdim_traces_A = trace_A_ch |> 
-				@filter(_.Response .> exp_A.rdim[idx]) |> 
-			DataFrame			
-			plot_IR(ax1[3], rdim_traces_A, y_row = :Peak_Time, 
-				plot_fits = false, color = :red, label = "Peak Time"
-			)
-			
-			tDOM_traces_A = trace_A_ch |> 
-				@filter(_.Percent_Recovery .> 0.0) |> 
-			DataFrame
-			
-			plot_IR(ax1[3], tDOM_traces_A, y_row = :Percent_Recovery, 
-				plot_fits = false, label = "Recovery"
-			)
-			ax1[3].legend()
-		end
-	end
-	fig1_awave
+	figA_summary = plot_data_summary(trace_A, exp_A)
+	axA_summary = figA_summary.get_axes()
+	figA_summary
 end
 
 # ╔═╡ 749e519e-32da-4e1b-b98e-d639d6489759
@@ -227,8 +105,7 @@ exp_A |> @map({_.Channel, _.rmax, _.rdim, _.time_to_peak, _.percent_recovery}) |
 
 # ╔═╡ c2a9d00e-bca1-4c8b-a5fe-5602f449c95c
 md"""
-# Analysis of the b-wave
-Analysis Window end = $(@bind t_post_b NumberField(-1.0:0.01:10.000; default = 2.0)),
+# On-Bipolar component
 """
 
 # ╔═╡ abdd10eb-6f0c-40bb-be03-2b7cc440af8c
@@ -240,141 +117,20 @@ begin
 	cond_B = dataset["CONDITIONS"] |> 
 		@filter(_.Condition == "BaCl" && _.Photoreceptor == "Rods") |> DataFrame
 		#only include used channels
-	dataAB = readABF(trace_B.Path, channels = channels)
-	data_filter!(dataAB, avg_swp = false, t_post = 5.0) #Use the default data filter
-	
-	data_ab_B = readABF(trace_B.Path, channels = channels)
-	data_filter!(data_ab_B, avg_swp = false, t_post = 5.0)
-	
-	data_a_B = readABF(trace_B.SubPath, channels = channels)
-	data_filter!(data_a_B, avg_swp = false, t_post = 5.0)
-	dataB = data_ab_B - data_a_B
-end;
-
-# ╔═╡ 44645dde-129f-4bec-b246-07ff3941c8a3
-md"""
-### Plotting the B-wave:
-
-xlims B:
-(
-$(@bind xlim1B NumberField(-1.0:0.01:10.000; default = -0.25)),
-$(@bind xlim2B NumberField(-1.0:0.01:10.000; default = t_post_b))
-)
-
-ylims B:
-	(
-	$(@bind ylim1B NumberField(
-		-10000.0:0.01:10000.000; default = minimum(dataAB))
-	),
-	$(@bind ylim2B NumberField(
-		-10000.0:0.01:10000.000; default = maximum(dataB))
-	)
-)
-
-Recovery Lims A:
-(
-$(@bind rec_lims1B 
-	NumberField(1.0:1.0:1000.0; default = 10.0))
-)
-$(@bind rec_lims2B 
-	NumberField(1.0:1.0:2000.0; default = maximum(trace_B.Percent_Recovery)*1000))
-"""
+	trace_B = trace_B |> @filter(_.Channel ∈ channels) |> 
+		@filter(_.Photoreceptor == photoreceptors) |> 
+	DataFrame
+	exp_B = exp_B |> @filter(_.Channel ∈ channels) |> 
+		@filter(_.Photoreceptor == photoreceptors) |> 
+	DataFrame
+	trace_B
+end
 
 # ╔═╡ 6eeb9f88-5acb-458c-8286-d3d802076858
 begin
-	fig2_bwave, ax2 = plt.subplots(length(channels), 4) #This 
-	fig2_bwave.subplots_adjust(
-		left=0.0, right=1.0, 
-		bottom=0.0, top=1.0, 
-		wspace=0.3, hspace=0.2
-	)
-	for (idx, data_ch) in enumerate(eachchannel(dataA))
-		println(idx)
-		trace_B_ch = trace_B |> @filter(_.Channel == data_ch.chNames[1]) |> DataFrame
-		if length(channels) > 1
-			#println(trace_B_ch.Response)
-			plot_experiment(ax2[idx, 1], data_ab_B, channels = idx,
-				xaxes_off = idx == 1
-			)
-			plot_experiment(ax2[idx, 1], data_a_B, color = :red, channels = idx,
-				xaxes_off = idx == 1
-			)
-			ax2[idx, 1].set_ylim((ylim1B, ylim2B))
-			ax2[idx, 1].set_xlim((xlim1B, xlim2B))
-			
-			plot_experiment(ax2[idx, 2], dataB, channels = idx)
-			ax2[idx, 2].hlines(trace_B_ch.Response, 
-				xmin = xlim1B, xmax = xlim2B, 
-			)
-			ax2[idx, 2].set_ylim((ylim1B, ylim2B))
-			ax2[idx, 2].set_xlim((xlim1B, xlim2B))
-
-			fits = exp_B |> @filter(_.Channel == data_ch.chNames[1]) |> DataFrame
-			plot_ir_scatter(ax2[idx, 3], trace_B_ch)
-			plot_ir_fit(ax2[idx, 3], 
-				(fits.RMAX_fit[1], fits.K_fit[1], fits.N_fit[1]),
-				fits.RSQ_fit[1]
-			)
-			ax2[idx, 3].set_xlim((10^photon_lims1, 10^photon_lims2))
-			ax2[idx, 3].set_ylim((-1.0, abs(ylim2B)))
-			ax2[idx, 3].legend()
-			
-			trace_B_ch.Percent_Recovery *= 1000
-			rdim_traces_B = trace_B_ch |> 
-				@filter(_.Response .> exp_B.rdim[idx]) |> 
-			DataFrame			
-			plot_IR(ax2[idx, 4], rdim_traces_B, y_row = :Peak_Time, 
-				plot_fits = false, color = :red, label = "Peak Time"
-			)
-			
-			tDOM_traces_B = trace_B_ch |> 
-				@filter(_.Percent_Recovery .> 0.0) |> 
-			DataFrame
-			
-			plot_IR(ax2[idx, 4], tDOM_traces_B, y_row = :Percent_Recovery, 
-				plot_fits = false, label = "Recovery"
-			)
-			ax2[idx, 4].legend()
-		else
-			plot_experiment(ax2[1], data_ab_B, channels = idx,
-				xaxes_off = idx == 1
-			)
-			plot_experiment(ax2[1], data_a_B, color = :red, channels = idx,
-				xaxes_off = idx == 1
-			)
-			plot_experiment(ax2[2], dataA, channels = idx)
-			ax2[2].set_ylim((ylim1B, ylim2B))
-			ax2[2].set_xlim((xlim1B, xlim2B))
-
-			fits = exp_B |> @filter(_.Channel == data_ch.chNames[1]) |> DataFrame
-			plot_ir_scatter(ax2[3], trace_B_ch)
-			plot_ir_fit(ax2[3], 
-				(fits.RMAX_fit[1], fits.K_fit[1], fits.N_fit[1]),
-				fits.RSQ_fit[1]
-			)
-			ax2[3].set_xlim((10^photon_lims1, 10^photon_lims2))
-			ax2[3].set_ylim((-1.0, abs(ylim1B)))
-			ax2[3].legend()
-			
-			trace_B_ch.Percent_Recovery *= 1000
-			rdim_traces_B = trace_B_ch |> 
-				@filter(_.Response .> exp_B.rdim[idx]) |> 
-			DataFrame			
-			plot_IR(ax2[4], rdim_traces_B, y_row = :Peak_Time, 
-				plot_fits = false, color = :red, label = "Peak Time"
-			)
-			
-			tDOM_traces_B = trace_B_ch |> 
-				@filter(_.Percent_Recovery .> 0.0) |> 
-			DataFrame
-			
-			plot_IR(ax2[4], tDOM_traces_B, y_row = :Percent_Recovery, 
-				plot_fits = false, label = "Recovery"
-			)
-			ax2[4].legend()
-		end
-	end
-	fig2_bwave
+	figB_summary = plot_data_summary(trace_B, exp_B)
+	axB_summary = figB_summary.get_axes()
+	figB_summary
 end
 
 # ╔═╡ 02138c18-d46e-4a5d-aaf7-3281ccf755b0
@@ -395,8 +151,7 @@ exp_B |> @map({_.Channel, _.rmax, _.rdim, _.time_to_peak, _.percent_recovery}) |
 
 # ╔═╡ c0993bf9-c0fe-4aee-9ebb-6e63ce4a2246
 md"""
-# Analysis of the Glial-component
-Analysis Window end = $(@bind t_post_g NumberField(-1.0:0.01:10.000; default = 2.0)),
+# Glial component
 """
 
 # ╔═╡ 2d62d63c-081f-4ddf-8a8d-d1f4c92827f5
@@ -410,146 +165,22 @@ begin
 	cond_G = dataset["CONDITIONS"] |> 
 		@filter(_.Condition == "NoDrugs" && _.Photoreceptor == "Rods") |> 
 	DataFrame
-		#only include used channels
-	dataABG = readABF(trace_G.Path, channels = channels)
-	data_filter!(dataABG, avg_swp = false, t_post = 5.0) #Use the default data filter
-	data_abg_G = readABF(trace_G.Path, channels = channels)
-	data_filter!(data_abg_G, avg_swp = false, t_post = 5.0)
-	data_ab_G = readABF(trace_G.SubPath, channels = channels)
-	data_filter!(data_ab_G, avg_swp = false, t_post = 5.0)
-	dataG = data_abg_G - data_ab_G
-end;
 
-# ╔═╡ 87c01068-8042-490b-a2b3-98a6574e87e8
-trace_G |> 
-	@map({_.Channel, _.Photons, _.Response, _.Peak_Time, _.Percent_Recovery}) |> 
-	@orderby(_.Channel) |> @thenby(_.Photons) |> 
-DataFrame
-
-# ╔═╡ 1bce802f-0930-4eb7-bb98-e4df80abff26
-md"""
-### Plotting the G-wave:
-
-xlims G:
-(
-$(@bind xlim1G NumberField(-1.0:0.01:10.000; default = -0.25)),
-$(@bind xlim2G NumberField(-1.0:0.01:10.000; default = t_post_g))
-)
-
-ylims G:
-	(
-	$(@bind ylim1G NumberField(
-		-10000.0:0.01:10000.000; default = minimum(dataG))
-	),
-	$(@bind ylim2G NumberField(
-		-10000.0:0.01:10000.000; default = maximum(dataB))
-	)
-)
-
-Recovery Lims G:
-(
-$(@bind rec_lims1G 
-	NumberField(1.0:1.0:1000.0; default = 10.0))
-)
-$(@bind rec_lims2G 
-	NumberField(1.0:1.0:2000.0; default = maximum(trace_G.Percent_Recovery)*1000))
-"""
+	trace_G = trace_G |> @filter(_.Channel ∈ channels) |> 
+		@filter(_.Photoreceptor == photoreceptors) |> 
+	DataFrame
+	exp_G = exp_G |> @filter(_.Channel ∈ channels) |> 
+		@filter(_.Photoreceptor == photoreceptors) |> 
+	DataFrame
+	
+	trace_G
+end
 
 # ╔═╡ 3c2b3129-6d26-43d0-96e5-386bf47bddab
 begin
-	fig3_gwave, ax3 = plt.subplots(length(channels), 4) #This 
-	fig3_gwave.subplots_adjust(
-		left=0.0, right=1.0, 
-		bottom=0.0, top=1.0, 
-		wspace=0.3, hspace=0.2
-	)
-	for (idx, data_ch) in enumerate(eachchannel(dataA))
-		println(idx)
-		trace_G_ch = trace_G |> @filter(_.Channel == data_ch.chNames[1]) |> DataFrame
-		if length(channels) > 1
-			#println(trace_G_ch.Response)
-			plot_experiment(ax3[idx, 1], data_abg_G, channels = idx,
-				xaxes_off = idx == 1
-			)
-			plot_experiment(ax3[idx, 1], data_ab_G, color = :red, channels = idx,
-				xaxes_off = idx == 1
-			)
-			ax3[idx, 1].set_ylim((ylim1G, ylim2G))
-			ax3[idx, 1].set_xlim((xlim1G, xlim2G))
-			
-			plot_experiment(ax3[idx, 2], dataG, channels = idx)
-			ax3[idx, 2].hlines(-trace_G_ch.Response, 
-				xmin = xlim1B, xmax = xlim2B, 
-			)
-			ax3[idx, 2].set_ylim((ylim1G, ylim2G))
-			ax3[idx, 2].set_xlim((xlim1G, xlim2G))
-
-			fits = exp_G |> @filter(_.Channel == data_ch.chNames[1]) |> DataFrame
-			plot_ir_scatter(ax3[idx, 3], trace_G_ch)
-			plot_ir_fit(ax3[idx, 3], 
-				(fits.RMAX_fit[1], fits.K_fit[1], fits.N_fit[1]),
-				fits.RSQ_fit[1]
-			)
-			ax3[idx, 3].set_xlim((10^photon_lims1, 10^photon_lims2))
-			ax3[idx, 3].set_ylim((-1.0, abs(ylim1G)))
-			ax3[idx, 3].legend()
-			
-			trace_G_ch.Percent_Recovery *= 1000
-			rdim_traces_G = trace_G_ch |> 
-				@filter(_.Response .> exp_G.rdim[idx]) |> 
-			DataFrame			
-			plot_IR(ax3[idx, 4], rdim_traces_G, y_row = :Peak_Time, 
-				plot_fits = false, color = :red, label = "Peak Time"
-			)
-			
-			tDOM_traces_G = trace_G_ch |> 
-				@filter(_.Percent_Recovery .> 0.0) |> 
-			DataFrame
-			
-			plot_IR(ax3[idx, 4], tDOM_traces_G, y_row = :Percent_Recovery, 
-				plot_fits = false, label = "Recovery"
-			)
-			ax3[idx, 4].legend()
-		else
-			plot_experiment(ax3[1], data_ab_G, channels = idx,
-				xaxes_off = idx == 1
-			)
-			plot_experiment(ax3[1], data_a_G, color = :red, channels = idx,
-				xaxes_off = idx == 1
-			)
-			plot_experiment(ax3[2], dataA, channels = idx)
-			ax3[2].set_ylim((ylim1G, ylim2G))
-			ax3[2].set_xlim((xlim1G, xlim2G))
-
-			fits = exp_G |> @filter(_.Channel == data_ch.chNames[1]) |> DataFrame
-			plot_ir_scatter(ax3[3], trace_G_ch)
-			plot_ir_fit(ax3[3], 
-				(fits.RMAX_fit[1], fits.K_fit[1], fits.N_fit[1]),
-				fits.RSQ_fit[1]
-			)
-			ax3[3].set_xlim((10^photon_lims1, 10^photon_lims2))
-			ax3[3].set_ylim((-1.0, abs(ylim1G)))
-			ax3[3].legend()
-			
-			trace_G_ch.Percent_Recovery *= 1000
-			rdim_traces_G = trace_G_ch |> 
-				@filter(_.Response .> exp_G.rdim[idx]) |> 
-			DataFrame			
-			plot_IR(ax3[4], rdim_traces_G, y_row = :Peak_Time, 
-				plot_fits = false, color = :red, label = "Peak Time"
-			)
-			
-			tDOM_traces_G = trace_G_ch |> 
-				@filter(_.Percent_Recovery .> 0.0) |> 
-			DataFrame
-			
-			plot_IR(ax3[4], tDOM_traces_G, y_row = :Percent_Recovery, 
-				plot_fits = false, label = "Recovery"
-			)
-			ax3[4].legend()
-		end
-	end
-	fig3_gwave
+	figG_summary = plot_data_summary(trace_G, exp_G)
+	axG_summary = figG_summary.get_axes()
+	figG_summary
 end
 
 # ╔═╡ cfe8f792-84d8-4129-9c0c-061e6b79348e
@@ -570,9 +201,9 @@ exp_G |> @map({_.Channel, _.rmax, _.rdim, _.time_to_peak, _.percent_recovery}) |
 
 # ╔═╡ fa29d56f-93e2-4260-be26-1f985c4804f3
 begin
-	fig1_awave
-	fig2_bwave
-	fig3_gwave
+	figA_summary
+	figB_summary
+	figG_summary
 	plt.close("all")
 end
 
@@ -593,7 +224,7 @@ XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
 DataFrames = "~1.5.0"
-PhysiologyAnalysis = "~0.2.0"
+PhysiologyAnalysis = "~0.3.0"
 PlutoUI = "~0.7.50"
 Query = "~1.0.0"
 XLSX = "~0.8.4"
@@ -641,9 +272,9 @@ version = "3.5.1+1"
 
 [[deps.ArrayInterface]]
 deps = ["Adapt", "LinearAlgebra", "Requires", "SnoopPrecompile", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "ec9c36854b569323551a6faf2f31fda15e3459a7"
+git-tree-sha1 = "a89acc90c551067cd84119ff018619a1a76c6277"
 uuid = "4fba245c-0d91-5ea0-9b3e-6abc04ee57a9"
-version = "7.2.0"
+version = "7.2.1"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -746,9 +377,9 @@ version = "0.3.0"
 
 [[deps.Compat]]
 deps = ["Dates", "LinearAlgebra", "UUIDs"]
-git-tree-sha1 = "61fdd77467a5c3ad071ef8277ac6bd6af7dd4c04"
+git-tree-sha1 = "7a60c856b9fa189eb34f5f8a6f6b5529b7942957"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.6.0"
+version = "4.6.1"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1418,9 +1049,9 @@ version = "2.5.8"
 
 [[deps.PhysiologyAnalysis]]
 deps = ["DSP", "DataFrames", "Dates", "Distributions", "ElectroPhysiology", "HypothesisTests", "LsqFit", "Polynomials", "PyCall", "PyPlot", "Query", "Statistics", "StatsBase", "StatsPlots", "Test", "XLSX"]
-git-tree-sha1 = "116cdf1ed57ba19647199456f61b74dd38fd7adc"
+git-tree-sha1 = "94d50400a592409ecba5f5de189974893cc69773"
 uuid = "69cbc4a0-077e-48a7-9b45-fa8b7014b5ca"
-version = "0.2.0"
+version = "0.3.0"
 
 [[deps.Pipe]]
 git-tree-sha1 = "6842804e7867b115ca9de748a0cf6b364523c16d"
@@ -2038,35 +1669,28 @@ version = "1.4.1+0"
 
 # ╔═╡ Cell order:
 # ╠═6da04c26-693d-4537-864f-ccd4951c7763
-# ╠═f025cf76-d513-4f9f-a5be-c7461dcd34ef
 # ╟─9d51d150-3339-435c-ad76-59b81bdcf305
 # ╠═1fb1daf9-59fd-42aa-b30b-bc5413a6cc67
 # ╟─7230a9b1-49cd-483b-be4f-f42e2f9a0208
 # ╠═bc4d42b1-6848-4c61-99ce-1e437c08497b
 # ╠═23be0000-67de-4f22-98e7-cd89287a2a6f
-# ╠═01fab469-e7c3-4573-9e75-d2d13c7ff3de
 # ╟─88ef46c3-7575-4a18-a8b5-15a0c2152c6a
-# ╠═734c8f3e-7092-48fd-9784-391bde74fc08
-# ╟─3a7ca4cb-8df2-4869-b3ef-f39774c00b58
-# ╠═c11191b2-3c8f-4962-b5f5-505b4042a5a1
-# ╠═45799282-ac17-44de-9929-99d766c9e556
-# ╟─7e697def-11bf-4783-9e35-a8bb9df0e530
+# ╠═01fab469-e7c3-4573-9e75-d2d13c7ff3de
+# ╟─734c8f3e-7092-48fd-9784-391bde74fc08
+# ╟─44cf1164-5083-4e42-be38-f12edbc25f7f
 # ╟─749e519e-32da-4e1b-b98e-d639d6489759
 # ╟─026ab1aa-2f80-4097-b6fb-1f93f45cd779
 # ╟─b43bc77b-81d1-4bc8-8a73-f41e8a8ee668
 # ╟─eef22abd-af03-4509-a70d-9f3d7b7a79df
 # ╟─c2a9d00e-bca1-4c8b-a5fe-5602f449c95c
 # ╟─abdd10eb-6f0c-40bb-be03-2b7cc440af8c
-# ╟─44645dde-129f-4bec-b246-07ff3941c8a3
-# ╠═6eeb9f88-5acb-458c-8286-d3d802076858
+# ╟─6eeb9f88-5acb-458c-8286-d3d802076858
 # ╟─02138c18-d46e-4a5d-aaf7-3281ccf755b0
 # ╟─8fa36875-e7e8-442e-bb0c-2f24af295592
 # ╟─f571351f-992d-4c15-90b6-fd63be9c6793
 # ╟─25e51d82-66ef-4ec2-8362-dbb82a4dac55
 # ╟─c0993bf9-c0fe-4aee-9ebb-6e63ce4a2246
 # ╟─2d62d63c-081f-4ddf-8a8d-d1f4c92827f5
-# ╟─87c01068-8042-490b-a2b3-98a6574e87e8
-# ╟─1bce802f-0930-4eb7-bb98-e4df80abff26
 # ╟─3c2b3129-6d26-43d0-96e5-386bf47bddab
 # ╟─cfe8f792-84d8-4129-9c0c-061e6b79348e
 # ╟─1ec9990d-8c4a-4ecd-bcf2-b4407a61e9dd
