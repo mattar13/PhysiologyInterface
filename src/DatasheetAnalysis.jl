@@ -44,14 +44,20 @@ end;
 @bind reload Button("Reload datasheet")
 
 # ╔═╡ 7d88a683-a28f-4285-b95c-4b3f83f735e4
-orderby = [:RSQ, :Genotype]
+orderby = [:RMAX_fit, :Genotype]
+
+# ╔═╡ 3e34ce51-8307-4c76-9251-95c0c71b73d6
+age = "Adult";
+
+# ╔═╡ 9cf7b788-f49d-412f-9d92-487fd1198c03
+condition = "NoDrugs";
 
 # ╔═╡ 1b247067-3d7d-4fb8-82a1-17328dafe734
 begin
 	reload #This will reload the experiment list
 	exps = dataset["EXPERIMENTS"] |> 
 		@filter(_.Photoreceptor == "Rods" && _.INCLUDE == true) |>
-		@filter(_.Age == "P13") |> 
+		@filter(_.Age == age && _.Condition == condition) |> 
 		@map({
 		RSQ = round.(_.RSQ_fit, digits = 2), 
 		_.Year, _.Month, _.Date, _.Number, 
@@ -105,21 +111,20 @@ begin
 		for i in eachindex(selectExps)
 			flagExperiment!(dataset["EXPERIMENTS"], selectExps[i])
 		end
-		#recalculate the conditions
-		dataset["CONDITIONS"] = summarize_data(dataset)
-		dataset["STATS"] = dataset_statistics(dataset)
 	else
 		#println("Not flagging experiment")
 		nothing
 	end
+	dataset["CONDITIONS"] = summarize_data(dataset)
+
+	#dataset["STATS"] = dataset_statistics(dataset)
 	dataset["EXPERIMENTS"][findall(dataset["EXPERIMENTS"].INCLUDE .== false), :]
-	#We can also recalculate the
 end
 
 # ╔═╡ c3d3c843-9573-429f-93c1-dbdfac713e36
 begin
 	reload
-	plot_dataset_fits(dataset, normalize = false)
+	plot_dataset_fits(dataset, normalize = false, condition = condition)
 end
 
 # ╔═╡ 58461f8e-0e16-4b11-8013-b4bb276d1c4d
@@ -142,14 +147,11 @@ end
 
 # ╔═╡ 3b1e1d4b-91e0-46ef-a981-e93e0dafb4c8
 dataset["CONDITIONS"] |> 
-	@filter(_.Age == "Adult" && _.Condition == "BaCl_LAP4" && _.Photoreceptor == "Rods") |> 
+	@filter(_.Age == age && _.Condition == condition && _.Photoreceptor == "Rods") |> 
 DataFrame
 
 # ╔═╡ 4ce59fd4-d808-4e09-acdb-3b344ff5bfab
 plt.close("all")
-
-# ╔═╡ ac2a64cf-0ea2-4a10-98ec-64b9a9f44201
-dataset["STATS"]
 
 # ╔═╡ 75ca32a6-da05-45fa-9392-2cfd75856f35
 @bind update Button("Update datasheet")
@@ -174,7 +176,7 @@ XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
 DataFrames = "~1.5.0"
-PhysiologyAnalysis = "~0.3.4"
+PhysiologyAnalysis = "~0.3.6"
 PlutoUI = "~0.7.50"
 Query = "~1.0.0"
 XLSX = "~0.8.4"
@@ -999,9 +1001,9 @@ version = "2.5.8"
 
 [[deps.PhysiologyAnalysis]]
 deps = ["DSP", "DataFrames", "Dates", "Distributions", "ElectroPhysiology", "HypothesisTests", "LsqFit", "Polynomials", "PyCall", "PyPlot", "Query", "Statistics", "StatsBase", "StatsPlots", "Test", "XLSX"]
-git-tree-sha1 = "d3ba2299b72c37138bc18ed97e9eb3fd3f59ab0c"
+git-tree-sha1 = "b1072e1143f77b360d1990ffce89426cca24a775"
 uuid = "69cbc4a0-077e-48a7-9b45-fa8b7014b5ca"
-version = "0.3.4"
+version = "0.3.6"
 
 [[deps.Pipe]]
 git-tree-sha1 = "6842804e7867b115ca9de748a0cf6b364523c16d"
@@ -1625,18 +1627,19 @@ version = "1.4.1+0"
 # ╟─da89edc7-04ef-4bf7-923d-f48a2fa3a12c
 # ╟─ee629136-2403-42b3-80ee-add0f297b09d
 # ╠═7d88a683-a28f-4285-b95c-4b3f83f735e4
+# ╠═3e34ce51-8307-4c76-9251-95c0c71b73d6
+# ╠═9cf7b788-f49d-412f-9d92-487fd1198c03
 # ╟─1b247067-3d7d-4fb8-82a1-17328dafe734
 # ╟─b166a475-5376-46a2-b669-6b0822090c55
 # ╟─66e9779e-91b7-4614-86db-28076c5b83f7
 # ╟─a31b3bef-df46-48af-aee7-940a5940cd29
-# ╟─a883eb90-d471-4811-9c49-a344d68226d4
+# ╠═a883eb90-d471-4811-9c49-a344d68226d4
 # ╟─c3d3c843-9573-429f-93c1-dbdfac713e36
 # ╟─58461f8e-0e16-4b11-8013-b4bb276d1c4d
 # ╟─619ed622-bdf7-4e0b-a1b1-5162a8bd4925
 # ╟─c7ee157c-34c0-4e83-997e-1e836e0038f7
-# ╟─3b1e1d4b-91e0-46ef-a981-e93e0dafb4c8
-# ╠═4ce59fd4-d808-4e09-acdb-3b344ff5bfab
-# ╠═ac2a64cf-0ea2-4a10-98ec-64b9a9f44201
+# ╠═3b1e1d4b-91e0-46ef-a981-e93e0dafb4c8
+# ╟─4ce59fd4-d808-4e09-acdb-3b344ff5bfab
 # ╟─75ca32a6-da05-45fa-9392-2cfd75856f35
 # ╟─1c463877-3146-408f-bbbc-40fb78604fae
 # ╟─00000000-0000-0000-0000-000000000001
