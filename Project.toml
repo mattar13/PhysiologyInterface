@@ -6,6 +6,7 @@ version = "0.1.0"
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 ElectroPhysiology = "da7a9670-f599-43ac-b818-143f8bf87d45"
+NIDAQ = "66b72792-1abf-55ab-8064-6e9051317175"
 PhysiologyAnalysis = "69cbc4a0-077e-48a7-9b45-fa8b7014b5ca"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Pluto = "c3e4b0f8-55cb-11ea-2926-15256bba5781"
@@ -17,6 +18,8 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
+DataFrames = "1"
+ElectroPhysiology = "0.4.0" 
 julia = "1"
 
 [extras]
