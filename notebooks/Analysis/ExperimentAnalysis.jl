@@ -36,7 +36,7 @@ There are two options to opening the data you want to analyze
 "
 
 # ╔═╡ 7d089cbd-1e45-40b2-9d8a-049fb75a440b
-exp_root = raw"C:\Users\mtarc\OneDrive - The University of Akron\Data\ERG\Retinoschisis\2021_09_12_RS1KO-13\Mouse1_P13_RS1KO"
+exp_root = raw"C:\Users\mtarc\OneDrive - The University of Akron\Data\ERG\Retinoschisis\2021_05_26_WT-11\Mouse1_P11_WT"
 
 # ╔═╡ aaf8ac72-7775-48d5-80cc-9cc6ffde4581
 md"#### b) Point out the channel(s) you want to analyze or"
@@ -61,24 +61,18 @@ begin
 	dataset = runExperimentAnalysis(dataset, verbose = false);
 end;
 
-# ╔═╡ 7304a6d6-d48d-4a2a-8f6d-53f63dfa5b76
-dataset["TRACES"]
-
 # ╔═╡ f4b9ce4f-df6c-48fe-b7ee-a87957069e0b
 begin
 	trace_A = matchExperiment(dataset["TRACES"], 
 		(Condition = "BaCl_LAP4", Photoreceptor = "Rods")
-	)
+	);
 	trace_B = matchExperiment(dataset["TRACES"], 
 		(Condition = "BaCl", Photoreceptor = "Rods")
-	)
+	);
 	trace_G = matchExperiment(dataset["TRACES"], 
 		(Condition = "NoDrugs", Photoreceptor = "Rods")
-	)
+	);
 end;
-
-# ╔═╡ 3683b4ea-8e29-4909-ab73-f94670d51c4c
-trace_A
 
 # ╔═╡ 0ea9e129-f690-4cb8-8cd6-728a0300f425
 begin
@@ -86,6 +80,15 @@ begin
 	dataA = readABF(trace_A.Path) |> data_filter
 	plot_experiment(axs[1,1], dataA)
 	
+	data_ab = readABF(trace_B.Path) |> data_filter
+	data_a = readABF(trace_B.SubPath) |> data_filter
+	dataB = data_ab - data_a
+	plot_experiment(axs[2,1], dataB)
+
+	data_abg = readABF(trace_G.Path) |> data_filter
+	data_ab = readABF(trace_G.SubPath) |> data_filter
+	dataG = data_abg - data_ab
+	plot_experiment(axs[3,1], dataG)
 	fig
 end
 
@@ -2153,15 +2156,13 @@ version = "1.4.1+0"
 # ╔═╡ Cell order:
 # ╠═d014b540-2137-11ee-0ebc-2379fd2e133a
 # ╟─17a63d1d-81e9-4987-b5c9-e0b981abd40c
-# ╟─7d089cbd-1e45-40b2-9d8a-049fb75a440b
+# ╠═7d089cbd-1e45-40b2-9d8a-049fb75a440b
 # ╟─aaf8ac72-7775-48d5-80cc-9cc6ffde4581
 # ╠═30a25e7e-3227-4491-9971-4cc59cff88f4
 # ╠═b15e3edc-6363-46cf-8f97-c7037ca7ebb4
 # ╠═9a4f3a6c-5b5c-4b6d-9ebf-f4fdb8246e8c
-# ╠═7ac318b1-c777-478a-b37b-38e0cd9860cf
-# ╠═7304a6d6-d48d-4a2a-8f6d-53f63dfa5b76
+# ╟─7ac318b1-c777-478a-b37b-38e0cd9860cf
 # ╠═f4b9ce4f-df6c-48fe-b7ee-a87957069e0b
-# ╠═3683b4ea-8e29-4909-ab73-f94670d51c4c
 # ╠═0ea9e129-f690-4cb8-8cd6-728a0300f425
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
