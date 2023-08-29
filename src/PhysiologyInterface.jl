@@ -1,9 +1,9 @@
 module PhysiologyInterface
 
 # Write your package code here.
-#using Pkg
-using PhysiologyAnalysis
 using Pluto
 
+include("OpeningInterface.jl")
+export run_tutorials
 
 end
